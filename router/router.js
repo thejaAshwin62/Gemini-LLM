@@ -1,6 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
-import { generateContentFromImageAndText } from "../servies/googleGeminiLLM.js";
+import {
+  generateContentFromImageAndText,
+  generateVideoFromPrompt,
+  checkVeo3Credits,
+} from "../servies/googleGeminiLLM.js";
 import path from "path";
 
 const router = Router();
@@ -35,6 +39,52 @@ router.post("/process", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("Error processing request:", error);
     res.status(500).json({ error: "Failed to process the request" });
+  }
+});
+
+// Endpoint to generate video from text prompt using Veo 3.0
+router.post("/generate-video", async (req, res) => {
+  try {
+    const { prompt, model, aspectRatio, watermark, imageUrls, filename } =
+      req.body;
+
+    if (!prompt) {
+      return res
+        .status(400)
+        .json({ error: "Prompt is required for video generation" });
+    }
+
+    const options = {
+      model: model || "veo3",
+      aspectRatio: aspectRatio || "16:9",
+      watermark: watermark || null,
+      imageUrls: imageUrls || null,
+      outputFilename: filename || `video_${Date.now()}.mp4`,
+    };
+
+    const result = await generateVideoFromPrompt(prompt, options);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error generating video:", error);
+    res.status(500).json({
+      error: "Failed to generate video",
+      details: error.message,
+    });
+  }
+});
+
+// Endpoint to check Veo3 API credits
+router.get("/credits", async (req, res) => {
+  try {
+    const result = await checkVeo3Credits();
+    res.json(result);
+  } catch (error) {
+    console.error("Error checking credits:", error);
+    res.status(500).json({
+      error: "Failed to check credits",
+      details: error.message,
+    });
   }
 });
 
